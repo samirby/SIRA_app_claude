@@ -1,0 +1,11 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getAuthSettings, SESSION_COOKIE, verifySessionToken } from "@/core/auth/session";
+import { createTicket, listTickets } from "@/modules/tickets/ticket.repository";
+
+export const dynamic="force-dynamic"; export const runtime="nodejs";
+async function session(){return verifySessionToken((await cookies()).get(SESSION_COOKIE)?.value,getAuthSettings().secret);}
+const createSchema=z.object({clientId:z.number().int().positive().nullable().optional(),title:z.string().trim().min(2).max(190),description:z.string().trim().min(2).max(5000),priority:z.enum(["NORMAL","HIGH","URGENT"]).default("NORMAL"),dueAt:z.string().nullable().optional()});
+export async function GET(request:Request){const s=await session();if(!s)return NextResponse.json({ok:false,error:{message:"Nuk je i kyçur."}},{status:401});try{const params=new URL(request.url).searchParams;const q=params.get("search")??"";const previewClientId=s.role==="GLOBAL_ADMIN"?Number(params.get("clientId")||0)||null:null;const clientId=s.role==="CLIENT"?s.clientId:previewClientId;return NextResponse.json({ok:true,data:await listTickets(1,clientId,q)});}catch(e){console.error(e);return NextResponse.json({ok:false,error:{message:"Ticket-at nuk mund të ngarkohen."}},{status:500});}}
+export async function POST(request:Request){const s=await session();if(!s)return NextResponse.json({ok:false,error:{message:"Nuk je i kyçur."}},{status:401});try{const parsed=createSchema.safeParse(await request.json());if(!parsed.success)return NextResponse.json({ok:false,error:{message:parsed.error.issues[0]?.message||"Të dhënat nuk janë valide."}},{status:400});const clientId=s.role==="CLIENT"?s.clientId:parsed.data.clientId;if(!clientId)return NextResponse.json({ok:false,error:{message:"Zgjidh klientin."}},{status:400});const id=await createTicket(1,{clientId,title:parsed.data.title,description:parsed.data.description,priority:parsed.data.priority,dueAt:parsed.data.dueAt||null,createdByUserId:s.userId,createdByRole:s.role});return NextResponse.json({ok:true,data:{id}},{status:201});}catch(e){console.error(e);return NextResponse.json({ok:false,error:{message:"Ticket-i nuk mund të krijohet."}},{status:500});}}

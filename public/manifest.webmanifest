@@ -1,0 +1,10 @@
+{
+  "name": "SIRA Platform",
+  "short_name": "SIRA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f9",
+  "theme_color": "#673de6",
+  "description": "SIRA modular business platform",
+  "icons": []
+}

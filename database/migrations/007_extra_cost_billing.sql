@@ -1,0 +1,3 @@
+ALTER TABLE task_extra_costs
+  ADD COLUMN cost_type ENUM('INTERNAL', 'CLIENT') NOT NULL DEFAULT 'INTERNAL' AFTER amount,
+  ADD COLUMN billable_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER cost_type;

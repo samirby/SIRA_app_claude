@@ -1,0 +1,12 @@
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS address_line VARCHAR(255) NULL AFTER phone,
+  ADD COLUMN IF NOT EXISTS company_name VARCHAR(160) NULL AFTER address_line,
+  ADD COLUMN IF NOT EXISTS city VARCHAR(120) NULL AFTER company_name,
+  ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) NULL AFTER city,
+  ADD COLUMN IF NOT EXISTS country_code CHAR(2) NULL AFTER postal_code,
+  ADD COLUMN IF NOT EXISTS tax_number VARCHAR(80) NULL AFTER country_code,
+  ADD COLUMN IF NOT EXISTS website VARCHAR(190) NULL AFTER tax_number,
+  ADD COLUMN IF NOT EXISTS notes TEXT NULL AFTER website;
+
+CREATE INDEX IF NOT EXISTS idx_clients_phone ON clients(phone);
+CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);

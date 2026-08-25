@@ -1,0 +1,61 @@
+CREATE TABLE organizations (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  status ENUM('ACTIVE','SUSPENDED','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE users (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  display_name VARCHAR(160) NOT NULL,
+  password_hash VARCHAR(255) NULL,
+  status ENUM('ACTIVE','INACTIVE','LOCKED') DEFAULT 'ACTIVE',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE organization_memberships (
+  organization_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  role_code VARCHAR(80) NOT NULL,
+  PRIMARY KEY (organization_id,user_id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE clients (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  organization_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  company_name VARCHAR(160) NULL,
+  client_type ENUM('BUSINESS','PRIVATE') NOT NULL,
+  email VARCHAR(190) NULL,
+  phone VARCHAR(50) NULL,
+  status ENUM('ACTIVE','INACTIVE','ARCHIVED') DEFAULT 'ACTIVE',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME NULL,
+  INDEX idx_clients_org (organization_id),
+  INDEX idx_clients_name (name),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE audit_logs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  organization_id BIGINT UNSIGNED NOT NULL,
+  actor_user_id BIGINT UNSIGNED NULL,
+  entity_type VARCHAR(100) NOT NULL,
+  entity_id VARCHAR(100) NULL,
+  action VARCHAR(50) NOT NULL,
+  before_data JSON NULL,
+  after_data JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_audit_org (organization_id),
+  INDEX idx_audit_entity (entity_type,entity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO organizations(name,slug) VALUES ('SIRA Solutions','sira-solutions');
