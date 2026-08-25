@@ -26,7 +26,7 @@ export default async function Page(){
  const monthMinutes=tasks.reduce((sum,t)=>sum+(t.timeEntries??[]).filter(e=>e.workDate?.startsWith(monthKey)).reduce((s,e)=>s+e.minutes,0),0);
  const pendingBilling=tasks.filter(t=>t.billingStatus==="PENDING").reduce((s,t)=>s+t.billingTotal+t.billableExtraCostTotal,0)+projects.filter(p=>p.billingStatus==="PENDING").reduce((s,p)=>s+p.billingTotal,0);
  const dueContracts=contracts.filter(c=>{const d=dueDays(c.endDate);return c.status==="ACTIVE"&&d!==null&&d>=0&&d<=c.reminderDays}).sort((a,b)=>(a.endDate??"").localeCompare(b.endDate??""));
- return <AppShell title="Dashboard" subtitle="Përmbledhja e punës së SIRA Solutions." hidePageHeader>
+ return <AppShell title="Dashboard" subtitle="Përmbledhja e punës së SIRA Solutions. [TEST — deploy check nga Claude]" hidePageHeader>
   <section className="dashboardMetrics">
    <Link href="/projects"><span className="metricIcon blue">◇</span><div><small>Projektet aktive</small><strong>{activeProjects.length}</strong><em>{activeProjects.length} projekte në zhvillim</em></div></Link>
    <Link href="/tasks"><span className="metricIcon orange">✓</span><div><small>Detyrat për sot</small><strong>{todayTasks.length}</strong><em className="orangeText">{urgentToday} urgjente</em></div></Link>
