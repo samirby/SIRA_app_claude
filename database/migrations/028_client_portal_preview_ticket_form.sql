@@ -1,5 +1,4 @@
 -- SIRA App v0.14.1
-USE `u720236376_siradb`;
 
 INSERT INTO application_releases (version,title,summary,release_channel,migration_name)
 VALUES ('0.14.1','Client Portal Preview dhe Ticket Form','U shtua Client Portal Preview në top menu dhe u standardizua forma e krijimit/editimit të ticket-it.','development','028_client_portal_preview_ticket_form.sql')

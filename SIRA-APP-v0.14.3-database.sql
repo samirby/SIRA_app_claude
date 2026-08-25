@@ -1,5 +1,4 @@
 -- SIRA App v0.14.3
-USE `u720236376_siradb`;
 
 INSERT INTO application_releases (version,title,summary,release_channel,migration_name) VALUES ('0.14.3','Dashboard & Ticket tabs','Dashboard Detyrat tani ka taba funksionale për Sot, Nesër dhe Të gjitha; Ticket System i integron 4 statuset në taba; dropdown-i Më shumë nuk pritet më nga menuja.','development','030_dashboard_ticket_tabs_nav_dropdown.sql') ON DUPLICATE KEY UPDATE title=VALUES(title),summary=VALUES(summary),release_channel=VALUES(release_channel),migration_name=VALUES(migration_name);
 

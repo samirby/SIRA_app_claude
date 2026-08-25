@@ -1,7 +1,6 @@
 -- SIRA App v0.13.2
 -- Butoni Fshi te Detyrat & Punët.
 
-USE `u720236376_siradb`;
 
 INSERT INTO application_releases (version, title, summary, release_channel, migration_name)
 VALUES (

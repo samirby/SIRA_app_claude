@@ -1,5 +1,4 @@
 -- SIRA App v0.14.4
-USE `u720236376_siradb`;
 
 INSERT INTO application_releases (
   version, title, summary, release_channel, migration_name
