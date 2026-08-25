@@ -66,6 +66,8 @@ export function TaskDetail({ taskId }: { taskId: number }) {
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Gabim i panjohur."); }
     finally { setLoading(false); }
   }
+  // load is redefined every render but only reads taskId (already a dep); intentionally excluded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [taskId]);
 
   async function request(url: string, method: string, body?: unknown) {

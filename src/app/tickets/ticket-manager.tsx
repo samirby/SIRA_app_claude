@@ -19,6 +19,8 @@ export function TicketManager({portal=false,previewClientId=null}:{portal?:boole
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const isPreview=portal&&!!previewClientId;
  async function load(){setLoading(true);setError("");try{const params=new URLSearchParams({search});if(previewClientId)params.set("clientId",String(previewClientId));const r=await fetch(`/api/v1/tickets?${params.toString()}`,{cache:"no-store"});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j?.error?.message||"Gabim");setTickets(j.data);if(detail){const updated=j.data.find((t:Ticket)=>t.id===detail.id);if(updated){setDetail(updated);setResolution(updated.resolutionNotes||"");setStatusDraft(updated.status);}}}catch(e){setError(e instanceof Error?e.message:"Gabim");}finally{setLoading(false)}}
+ // load is redefined every render but only reads previewClientId/search (already deps); intentionally excluded.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
  useEffect(()=>{void load()},[previewClientId]); useEffect(()=>{const x=setTimeout(()=>void load(),300);return()=>clearTimeout(x)},[search]);
  useEffect(()=>{if(portal&&!isPreview)return;fetch("/api/v1/clients?view=active",{cache:"no-store"}).then(r=>r.json()).then(j=>{if(j.ok)setClients(j.data.map((c:Client)=>({id:c.id,name:c.name})))})},[portal,isPreview]);
  const stats=useMemo(()=>({all:tickets.length,new:tickets.filter(t=>t.status==="NEW").length,work:tickets.filter(t=>t.status==="IN_PROGRESS").length,waiting:tickets.filter(t=>t.status==="WAITING_CLIENT").length,closed:tickets.filter(t=>t.status==="CLOSED").length,urgent:tickets.filter(t=>t.priority==="URGENT"&&t.status!=="CLOSED").length}),[tickets]);

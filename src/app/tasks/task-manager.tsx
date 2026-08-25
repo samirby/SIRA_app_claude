@@ -174,10 +174,14 @@ export function TaskManager({ projectContext, embedded = false, milestoneFilterI
   useEffect(() => {
     void Promise.all([loadTasks(true), loadOptions()]);
     return () => requestController.current?.abort();
+    // Runs once on mount only; loadTasks/loadOptions are redefined every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const timeout = window.setTimeout(() => void loadTasks(), 300);
     return () => window.clearTimeout(timeout);
+    // Debounced reload keyed on the filter values only; loadTasks is redefined every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, priorityFilter, billingFilter, clientFilter]);
   useEffect(() => {
     const projectId = Number(form.projectId);

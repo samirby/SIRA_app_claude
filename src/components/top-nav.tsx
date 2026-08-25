@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -81,13 +82,14 @@ export function TopNav() {
       <div className="mainMenuBar">
         <div className="mainMenuInner">
           <Link href="/" className="brandArea" aria-label="SIRA Solutions">
-            <img
+            <Image
               className="siraWordmark"
               src="/sira-logo-black.svg"
               alt="SIRA Solutions"
               width={560}
               height={180}
-              loading="eager"
+              unoptimized
+              priority
             />
           </Link>
 

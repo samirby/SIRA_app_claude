@@ -72,6 +72,8 @@ export function ClientManager() {
   useEffect(() => {
     void loadClients("", "active", true);
     return () => requestController.current?.abort();
+    // Runs once on mount only; loadClients is intentionally excluded since it's redefined every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -81,6 +83,9 @@ export function ClientManager() {
     }
     const timeout = window.setTimeout(() => void loadClients(search, view), 350);
     return () => window.clearTimeout(timeout);
+    // Debounced reload keyed on search/view only; loadClients is redefined every render and would
+    // otherwise retrigger this effect on unrelated renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, view]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

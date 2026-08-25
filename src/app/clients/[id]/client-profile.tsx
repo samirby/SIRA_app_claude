@@ -99,6 +99,9 @@ export function ClientProfile({ clientId }: { clientId: number }) {
 
   useEffect(() => {
     void loadClient();
+    // loadClient is redefined every render but only reads clientId (already a dep); re-running on every
+    // render would cause redundant fetches, so it's intentionally left out of the dependency array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const initials = useMemo(() => {

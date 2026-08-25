@@ -90,6 +90,8 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Gabim i panjohur."); }
     finally { setLoading(false); }
   }
+  // load is redefined every render but only reads projectId (already a dep); intentionally excluded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(true); }, [projectId]);
   useEffect(() => {
     if (!project || typeof window === "undefined") return;

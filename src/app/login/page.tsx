@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -5,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default function LoginPage() {
   return <main className="loginPage">
     <section className="loginPanel">
-      <div className="loginBrand"><img src="/sira-logo-black.svg" alt="SIRA Solutions" /><span>BUSINESS MANAGER</span></div>
+      <div className="loginBrand"><Image src="/sira-logo-black.svg" alt="SIRA Solutions" width={560} height={180} unoptimized /><span>BUSINESS MANAGER</span></div>
       <div className="loginHeading"><small>MIRË SE VJEN</small><h1>Kyçu në SIRA</h1><p>Menaxho klientët, projektet, detyrat dhe faturat në një vend.</p></div>
       <LoginForm />
       <footer>© {new Date().getFullYear()} SIRA Solutions</footer>
