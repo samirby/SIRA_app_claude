@@ -18,7 +18,7 @@ export default async function Page(){
  const today=new Date().toISOString().slice(0,10);
  const activeProjects=projects.filter(p=>p.status==="OPEN"||p.status==="IN_PROGRESS");
  const todayTasks=tasks.filter(t=>t.status!=="COMPLETED"&&t.dueDate===today);
- const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+ const tomorrow=new Date(new Date(today).getTime()+86400000).toISOString().slice(0,10);
  const tomorrowTasks=tasks.filter(t=>t.status!=="COMPLETED"&&t.dueDate===tomorrow);
  const allOpenTasks=tasks.filter(t=>t.status!=="COMPLETED");
  const urgentToday=todayTasks.filter(t=>t.priority==="URGENT").length;
