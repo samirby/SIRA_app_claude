@@ -356,3 +356,4 @@ Fixed MySQL parameter typing in the client update repository for strict TypeScri
 - After creation, the task detail page opens automatically; advanced settings remain available through Edit.
 - New clients start with type, name, email, phone and city.
 - Optional client details can be expanded and completed during creation or added later from the client profile.
+# push test via Codespaces 2026-08-26T10:20:30Z
