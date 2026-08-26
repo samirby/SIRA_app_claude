@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { TaskManager } from "@/app/tasks/task-manager";
+import { RecommendationsPanel } from "@/app/recommendations/recommendations-panel";
 
 type ProjectStatus = "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
 type TaskStatus = "NEW" | "IN_PROGRESS" | "WAITING" | "COMPLETED";
 type BillingType = "INCLUDED" | "EXTRA_BILLABLE" | "NON_BILLABLE";
-type ProjectTab = "overview" | "tasks" | "activity" | "documents" | "summary" | "phases" | "notes";
+type ProjectTab = "overview" | "tasks" | "activity" | "documents" | "summary" | "phases" | "notes" | "recommendations";
 type MilestoneStatus = "PLANNED" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED";
 type BlockerSeverity = "LOW" | "MEDIUM" | "HIGH";
 interface Label { id: number; name: string; color: string; }
@@ -44,6 +45,7 @@ const projectTabs: Array<{ value: ProjectTab; label: string; icon: string }> = [
   { value: "summary", label: "Përmbledhja", icon: "▦" },
   { value: "phases", label: "Fazat", icon: "④" },
   { value: "notes", label: "Aktiviteti", icon: "●" },
+  { value: "recommendations", label: "Rekomandime", icon: "★" },
 ];
 const emptyTask = { title: "", description: "", priority: "NORMAL" as Task["priority"], dueDate: "", projectBillingType: "INCLUDED" as BillingType, unitPrice: "", vatRate: "20", labelIds: [] as number[] };
 function euro(value: number) { return new Intl.NumberFormat("de-AT", { style: "currency", currency: "EUR" }).format(value); }
@@ -443,6 +445,8 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
     </section>}
 
     {activeTab === "tasks" && <section id="tasks" className="projectEmbeddedTasks projectTabPanel">{project.clientId ? <TaskManager embedded projectContext={{ id: project.id, clientId: project.clientId, name: project.name, clientName: project.clientName, milestones: workspace.milestones.map(({ id, name, status }) => ({ id, name, status })) }} onTasksChanged={() => void load()} /> : <div className="projectEmptyPanel"><strong>Projekti nuk ka klient</strong><p>Lidhe projektin me një klient para se të shtosh detyra.</p></div>}</section>}
+
+    {activeTab === "recommendations" && <section className="projectTabPanel">{project.clientId ? <RecommendationsPanel embedded clientId={project.clientId} projectId={project.id} projectName={project.name} /> : <div className="projectEmptyPanel"><strong>Projekti nuk ka klient</strong><p>Lidhe projektin me një klient para se të shtosh rekomandime.</p></div>}</section>}
 
     {activeTab === "activity" && <section className="projectActivityPanel projectTabPanel"><header><div><h3>Aktiviteti i projektit</h3><p>Shënime, vendime, kërkesa të klientit dhe ndryshime automatike.</p></div><strong>{activityItems.length}</strong></header><form className="projectUpdateForm" onSubmit={addUpdate}><label><span>Data</span><input type="date" required value={updateForm.updateDate} onChange={(event) => setUpdateForm({ ...updateForm, updateDate: event.target.value })} /></label><label><span>Lloji</span><select value={updateForm.updateType} onChange={(event) => setUpdateForm({ ...updateForm, updateType: event.target.value as ProjectUpdate["updateType"] })}><option value="UPDATE">Përditësim</option><option value="INFORMATION">Informacion</option><option value="DECISION">Vendim</option><option value="PROBLEM">Problem</option><option value="CLIENT_REQUEST">Kërkesë e klientit</option></select></label><label className="fieldWide"><span>Titulli</span><input required minLength={2} value={updateForm.title} onChange={(event) => setUpdateForm({ ...updateForm, title: event.target.value })} placeholder="Çfarë ndodhi?" /></label><label className="fieldWide"><span>Përshkrimi</span><textarea required minLength={2} value={updateForm.description} onChange={(event) => setUpdateForm({ ...updateForm, description: event.target.value })} /></label><button className="primaryButton" disabled={saving}>+ Ruaj aktivitetin</button></form><div className="projectActivityFullList">{activityItems.map((entry) => <article key={entry.key}><i /><div><strong>{entry.title}</strong><p>{entry.description}</p><time>{new Date(entry.createdAt).toLocaleString("de-AT")}</time></div>{entry.updateId && <button className="cleanDeleteButton" disabled={saving} onClick={() => void deleteUpdate(entry.updateId!)}>×</button>}</article>)}</div></section>}
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { RecommendationsPanel } from "@/app/recommendations/recommendations-panel";
 
 interface Client {
   id: number;
@@ -231,6 +232,10 @@ export function ClientProfile({ clientId }: { clientId: number }) {
           <section className="profileCard profileCardWide">
             <div className="profileCardHeader"><h3>Shënime</h3></div>
             <p className="profileNotes">{value(client.notes)}</p>
+          </section>
+
+          <section className="profileCard profileCardWide">
+            <RecommendationsPanel embedded clientId={client.id} clientName={client.name} />
           </section>
 
           <section className="profileCard profileCardWide profileFutureCard">

@@ -15,6 +15,7 @@ const businessItems = [
   ["Produktet", "/products"],
   ["Faturat", "/invoices"],
   ["Kontratat", "/contracts"],
+  ["Rekomandimet", "/recommendations"],
   ["Financat", "/finance"],
 ];
 
@@ -94,7 +95,7 @@ export function TopNav() {
           </Link>
 
           <nav className="desktopNav" aria-label="Main navigation">
-            {businessItems.filter(([,href]) => role === "GLOBAL_ADMIN" || ["/","/clients","/projects","/tasks","/tickets"].includes(href)).map(([label, href]) => (
+            {businessItems.filter(([,href]) => role === "GLOBAL_ADMIN" || ["/","/clients","/projects","/tasks","/tickets","/recommendations"].includes(href)).map(([label, href]) => (
               <Link key={href} href={href} className={isActive(href) ? "active" : ""}>
                 {label}
               </Link>
@@ -114,7 +115,7 @@ export function TopNav() {
 
       {open && (
         <div className="mobileNav">
-          {(role === "GLOBAL_ADMIN" ? [...businessItems, ["Admin Dashboard", "/admin"], ["Client Portal", "/portal-preview"], ...platformItems, ["Settings", "/settings"]] : businessItems.filter(([,href]) => ["/","/clients","/projects","/tasks","/tickets"].includes(href))).map(([label, href]) => (
+          {(role === "GLOBAL_ADMIN" ? [...businessItems, ["Admin Dashboard", "/admin"], ["Client Portal", "/portal-preview"], ...platformItems, ["Settings", "/settings"]] : businessItems.filter(([,href]) => ["/","/clients","/projects","/tasks","/tickets","/recommendations"].includes(href))).map(([label, href]) => (
             <Link
               key={href}
               href={href}
