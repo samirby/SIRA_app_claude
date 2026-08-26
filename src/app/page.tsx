@@ -29,7 +29,7 @@ export default async function Page(){
  return <AppShell title="Dashboard" subtitle="Përmbledhja e punës së SIRA Solutions." hidePageHeader>
   <div style={{display:"flex",alignItems:"center",gap:10,background:"#ecfdf5",border:"1px solid #10b981",borderRadius:10,padding:"10px 16px",marginBottom:16,color:"#065f46",fontSize:14,fontWeight:500}}>
    <span style={{width:8,height:8,borderRadius:"50%",background:"#10b981",flexShrink:0}}/>
-   Live deploy nga USB (jo nga disku i laptopit) — test i suksesshëm.
+   TEST SAMIR
   </div>
   <section className="dashboardMetrics">
    <Link href="/projects"><span className="metricIcon blue">◇</span><div><small>Projektet aktive</small><strong>{activeProjects.length}</strong><em>{activeProjects.length} projekte në zhvillim</em></div></Link>
