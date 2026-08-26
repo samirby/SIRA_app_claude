@@ -27,6 +27,10 @@ export default async function Page(){
  const pendingBilling=tasks.filter(t=>t.billingStatus==="PENDING").reduce((s,t)=>s+t.billingTotal+t.billableExtraCostTotal,0)+projects.filter(p=>p.billingStatus==="PENDING").reduce((s,p)=>s+p.billingTotal,0);
  const dueContracts=contracts.filter(c=>{const d=dueDays(c.endDate);return c.status==="ACTIVE"&&d!==null&&d>=0&&d<=c.reminderDays}).sort((a,b)=>(a.endDate??"").localeCompare(b.endDate??""));
  return <AppShell title="Dashboard" subtitle="Përmbledhja e punës së SIRA Solutions." hidePageHeader>
+  <div style={{display:"flex",alignItems:"center",gap:10,background:"#ecfdf5",border:"1px solid #10b981",borderRadius:10,padding:"10px 16px",marginBottom:16,color:"#065f46",fontSize:14,fontWeight:500}}>
+   <span style={{width:8,height:8,borderRadius:"50%",background:"#10b981",flexShrink:0}}/>
+   Live deploy nga GitHub Codespaces — jo nga laptopi.
+  </div>
   <section className="dashboardMetrics">
    <Link href="/projects"><span className="metricIcon blue">◇</span><div><small>Projektet aktive</small><strong>{activeProjects.length}</strong><em>{activeProjects.length} projekte në zhvillim</em></div></Link>
    <Link href="/tasks"><span className="metricIcon orange">✓</span><div><small>Detyrat për sot</small><strong>{todayTasks.length}</strong><em className="orangeText">{urgentToday} urgjente</em></div></Link>
