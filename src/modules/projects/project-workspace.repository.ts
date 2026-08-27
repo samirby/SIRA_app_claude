@@ -214,8 +214,12 @@ export async function insertProjectMilestoneRecord(
       input.dueDate ?? null, input.sortOrder, completedAt]);
   if (input.status === "IN_PROGRESS" || input.status === "COMPLETED") {
     await getDbPool().execute<ResultSetHeader>(
-      `UPDATE project_milestones SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
-       WHERE organization_id = ? AND project_id = ? AND id <> ? AND status <> 'COMPLETED' AND sort_order < ?`,
+      `UPDATE project_milestones pm SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
+       WHERE pm.organization_id = ? AND pm.project_id = ? AND pm.id <> ? AND pm.status <> 'COMPLETED' AND pm.sort_order < ?
+         AND NOT EXISTS (
+           SELECT 1 FROM tasks t WHERE t.organization_id = pm.organization_id
+             AND t.project_milestone_id = pm.id AND t.status <> 'COMPLETED' AND t.deleted_at IS NULL
+         )`,
       [organizationId, projectId, insertResult.insertId, input.sortOrder]);
   }
   await insertProjectActivity(organizationId, projectId, "MILESTONE_ADDED", `Faza “${input.name}” u shtua.`);
@@ -254,9 +258,13 @@ export async function updateProjectMilestoneRecord(
   if (!result.affectedRows) return null;
   if (input.status === "IN_PROGRESS" || input.status === "COMPLETED") {
     const [autoCompleted] = await getDbPool().execute<ResultSetHeader>(
-      `UPDATE project_milestones SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
-       WHERE organization_id = ? AND project_id = ? AND id <> ? AND status <> 'COMPLETED'
-         AND sort_order < (SELECT sort_order FROM (SELECT sort_order FROM project_milestones WHERE organization_id = ? AND project_id = ? AND id = ?) AS current_milestone)`,
+      `UPDATE project_milestones pm SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
+       WHERE pm.organization_id = ? AND pm.project_id = ? AND pm.id <> ? AND pm.status <> 'COMPLETED'
+         AND pm.sort_order < (SELECT sort_order FROM (SELECT sort_order FROM project_milestones WHERE organization_id = ? AND project_id = ? AND id = ?) AS current_milestone)
+         AND NOT EXISTS (
+           SELECT 1 FROM tasks t WHERE t.organization_id = pm.organization_id
+             AND t.project_milestone_id = pm.id AND t.status <> 'COMPLETED' AND t.deleted_at IS NULL
+         )`,
       [organizationId, projectId, milestoneId, organizationId, projectId, milestoneId]);
     if (autoCompleted.affectedRows) {
       await insertProjectActivity(organizationId, projectId, "MILESTONE_UPDATED", "Fazat paraprake u shënuan automatikisht si të përfunduara.");
