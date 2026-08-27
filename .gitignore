@@ -7,3 +7,4 @@ coverage/
 *.log
 PUSH_USB_ON_LAPTOP.bat
 push.bat
+COMMIT_MESSAGE.txt
