@@ -207,11 +207,17 @@ export async function insertProjectMilestoneRecord(
   input: { name: string; description?: string | null; status: ProjectMilestone["status"]; startDate?: string | null; dueDate?: string | null; sortOrder: number },
 ): Promise<ProjectWorkspace> {
   const completedAt = input.status === "COMPLETED" ? new Date() : null;
-  await getDbPool().execute<ResultSetHeader>(
+  const [insertResult] = await getDbPool().execute<ResultSetHeader>(
     `INSERT INTO project_milestones (organization_id, project_id, name, description, status, start_date, due_date, sort_order, completed_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [organizationId, projectId, input.name, input.description ?? null, input.status, input.startDate ?? null,
       input.dueDate ?? null, input.sortOrder, completedAt]);
+  if (input.status === "IN_PROGRESS" || input.status === "COMPLETED") {
+    await getDbPool().execute<ResultSetHeader>(
+      `UPDATE project_milestones SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
+       WHERE organization_id = ? AND project_id = ? AND id <> ? AND status <> 'COMPLETED' AND sort_order < ?`,
+      [organizationId, projectId, insertResult.insertId, input.sortOrder]);
+  }
   await insertProjectActivity(organizationId, projectId, "MILESTONE_ADDED", `Faza “${input.name}” u shtua.`);
   return listProjectWorkspaceRecords(organizationId, projectId);
 }
@@ -246,6 +252,16 @@ export async function updateProjectMilestoneRecord(
   const [result] = await getDbPool().execute<ResultSetHeader>(
     `UPDATE project_milestones SET ${fields.join(", ")} WHERE organization_id = ? AND project_id = ? AND id = ?`, values);
   if (!result.affectedRows) return null;
+  if (input.status === "IN_PROGRESS" || input.status === "COMPLETED") {
+    const [autoCompleted] = await getDbPool().execute<ResultSetHeader>(
+      `UPDATE project_milestones SET status = 'COMPLETED', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)
+       WHERE organization_id = ? AND project_id = ? AND id <> ? AND status <> 'COMPLETED'
+         AND sort_order < (SELECT sort_order FROM (SELECT sort_order FROM project_milestones WHERE organization_id = ? AND project_id = ? AND id = ?) AS current_milestone)`,
+      [organizationId, projectId, milestoneId, organizationId, projectId, milestoneId]);
+    if (autoCompleted.affectedRows) {
+      await insertProjectActivity(organizationId, projectId, "MILESTONE_UPDATED", "Fazat paraprake u shënuan automatikisht si të përfunduara.");
+    }
+  }
   await insertProjectActivity(organizationId, projectId, "MILESTONE_UPDATED", "Faza e projektit u përditësua.");
   return listProjectWorkspaceRecords(organizationId, projectId);
 }
