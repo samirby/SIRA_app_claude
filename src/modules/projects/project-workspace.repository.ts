@@ -32,7 +32,7 @@ type BlockerRow = RowDataPacket & {
 type ActivityRow = RowDataPacket & {
   id: number; action: string; description: string; details: string | Record<string, unknown> | null; created_at: Date;
 };
-type MilestoneIdentityRow = RowDataPacket & { id: number; project_id: number; name: string };
+type MilestoneIdentityRow = RowDataPacket & { id: number; project_id: number; name: string; status: ProjectMilestone["status"] };
 
 export interface ProjectDocumentFile { fileName: string; mimeType: string; fileData: Buffer; }
 
@@ -99,12 +99,12 @@ export async function listProjectWorkspaceRecords(organizationId: number, projec
 
 export async function findProjectMilestoneRecord(organizationId: number, milestoneId: number) {
   const [rows] = await getDbPool().query<MilestoneIdentityRow[]>(
-    `SELECT id, project_id, name FROM project_milestones
+    `SELECT id, project_id, name, status FROM project_milestones
      WHERE organization_id = ? AND id = ? LIMIT 1`,
     [organizationId, milestoneId],
   );
   const row = rows[0];
-  return row ? { id: row.id, projectId: row.project_id, name: row.name } : null;
+  return row ? { id: row.id, projectId: row.project_id, name: row.name, status: row.status } : null;
 }
 
 export async function insertProjectActivity(

@@ -1,11 +1,13 @@
 import { ApiError } from "@/core/http/api-error";
 import { getOrganizationContext } from "@/core/tenancy/context";
 import { findProjectMilestoneRecord } from "@/modules/projects/project-workspace.repository";
+import { updateProjectMilestone } from "@/modules/projects/project.service";
 import { createTaskSchema, labelSchema, taskExtraCostSchema, taskNoteSchema, taskTimeSchema, updateTaskSchema } from "./task.schema";
 import {
   addTaskExtraCostRecord,
   addTaskNoteRecord,
   addTaskTimeRecord,
+  countOpenTasksInMilestone,
   createLabelDefinition,
   deleteLabelDefinition,
   deleteTaskExtraCostRecord,
@@ -19,10 +21,26 @@ import {
   updateLabelDefinition,
   updateTaskRecord,
 } from "./task.repository";
-import type { TaskFilters } from "./task.types";
+import type { TaskFilters, TaskStatus } from "./task.types";
 
 export async function getTasks(filters: TaskFilters = {}) {
   return listTasks(getOrganizationContext().organizationId, filters);
+}
+
+async function syncMilestoneStatusFromTaskStatus(organizationId: number, projectMilestoneId: number, taskStatus: TaskStatus) {
+  if (taskStatus !== "IN_PROGRESS" && taskStatus !== "COMPLETED") return;
+  const milestone = await findProjectMilestoneRecord(organizationId, projectMilestoneId);
+  if (!milestone || milestone.status === "COMPLETED") return;
+  if (taskStatus === "IN_PROGRESS") {
+    if (milestone.status === "PLANNED") {
+      await updateProjectMilestone(milestone.projectId, milestone.id, { status: "IN_PROGRESS" });
+    }
+    return;
+  }
+  const openTasks = await countOpenTasksInMilestone(organizationId, projectMilestoneId);
+  if (openTasks === 0) {
+    await updateProjectMilestone(milestone.projectId, milestone.id, { status: "COMPLETED" });
+  }
 }
 
 export async function getTask(taskId: number) {
@@ -50,7 +68,11 @@ export async function createTask(payload: unknown) {
       throw new ApiError(400, "Faza e zgjedhur nuk i përket këtij projekti.", "TASK_PHASE_PROJECT_MISMATCH");
     }
   }
-  return insertTask(organizationId, parsed.data);
+  const task = await insertTask(organizationId, parsed.data);
+  if (parsed.data.projectMilestoneId) {
+    await syncMilestoneStatusFromTaskStatus(organizationId, parsed.data.projectMilestoneId, parsed.data.status);
+  }
+  return task;
 }
 
 export async function updateTask(taskId: number, payload: unknown) {
@@ -95,6 +117,9 @@ export async function updateTask(taskId: number, payload: unknown) {
   }
   const updated = await updateTaskRecord(getOrganizationContext().organizationId, taskId, parsed.data);
   if (!updated) throw new ApiError(404, "Detyra nuk u gjet.", "TASK_NOT_FOUND");
+  if (projectMilestoneId && parsed.data.status) {
+    await syncMilestoneStatusFromTaskStatus(getOrganizationContext().organizationId, projectMilestoneId, parsed.data.status as TaskStatus);
+  }
   return updated;
 }
 

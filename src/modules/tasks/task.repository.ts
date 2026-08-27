@@ -367,6 +367,15 @@ export async function findTaskById(organizationId: number, taskId: number): Prom
   return task;
 }
 
+export async function countOpenTasksInMilestone(organizationId: number, projectMilestoneId: number): Promise<number> {
+  const [rows] = await getDbPool().query<Array<RowDataPacket & { total: number }>>(
+    `SELECT COUNT(*) AS total FROM tasks WHERE organization_id = ? AND project_milestone_id = ?
+     AND status <> 'COMPLETED' AND deleted_at IS NULL`,
+    [organizationId, projectMilestoneId],
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
 async function insertHistory(
   connection: PoolConnection,
   organizationId: number,
