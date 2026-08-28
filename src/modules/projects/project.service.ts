@@ -46,10 +46,10 @@ import {
 // me statuset e Kanban-it të detyrave (shih TASK_STATUS_PHASE_ORDER te task.service.ts): kur statusi
 // i një detyre ndryshon, detyra kalon vetë te faza me të njëjtin sortOrder, dhe anasjelltas.
 const FIXED_PROJECT_PHASES = [
-  { name: "E re", description: "Planifikimi dhe materialet" },
-  { name: "Në punë", description: "Dizajni dhe zhvillimi" },
-  { name: "Në pritje", description: "Aprovimi nga klienti" },
-  { name: "Përfunduar", description: "Testimi dhe dorëzimi" },
+  { name: "Ide", description: "Kërkesat, materialet dhe plani fillestar" },
+  { name: "Ndërtim", description: "Realizimi i punës" },
+  { name: "Implementim & Testim", description: "Vendosja dhe kontrolli i cilësisë" },
+  { name: "Publikim & Përfundim", description: "Dorëzimi te klienti" },
 ] as const;
 
 export function getProjects(activeOnly = false) {
