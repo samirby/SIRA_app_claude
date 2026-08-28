@@ -252,7 +252,16 @@ export function TaskManager({ projectContext, embedded = false, milestoneFilterI
           setMessage("Detyra u krijua dhe u lidh automatikisht me projektin.");
           await loadTasks();
         } else {
-          router.push(`/tasks/${(result.data as Task).id}`);
+          const created = result.data as Task;
+          // Nëse detyra u lidh me një projekt, hap direkt projektin te faza ku u vendos detyra
+          // (jo faqen e vetë detyrës) — kështu shihet menjëherë konteksti i saj te Kanban-i i fazës.
+          if (created.projectId) {
+            router.push(created.projectMilestoneId
+              ? `/projects/${created.projectId}?milestone=${created.projectMilestoneId}`
+              : `/projects/${created.projectId}`);
+          } else {
+            router.push(`/tasks/${created.id}`);
+          }
         }
       }
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Gabim i panjohur."); }

@@ -97,6 +97,15 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
   useEffect(() => { void load(true); }, [projectId]);
   useEffect(() => {
     if (!project || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const milestoneParam = params.get("milestone");
+    if (milestoneParam) {
+      const milestoneId = Number(milestoneParam);
+      if (Number.isFinite(milestoneId)) { setActiveTab("overview"); selectMilestone(milestoneId); }
+      params.delete("milestone");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    }
     const target = window.location.hash;
     if (target === "#edit") {
       setEditForm({ name: project.name, description: project.description ?? "", status: project.status, startDate: project.startDate ?? "", dueDate: project.dueDate ?? "", estimatedHours: String(project.estimatedMinutes / 60), costBudget: String(project.costBudget), basePrice: String(project.basePrice), vatRate: String(project.vatRate), discountPercent: String(project.discountPercent) });
