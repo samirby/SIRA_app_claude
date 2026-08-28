@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { TaskManager } from "@/app/tasks/task-manager";
 import { RecommendationsPanel } from "@/app/recommendations/recommendations-panel";
 
@@ -52,6 +52,27 @@ function euro(value: number) { return new Intl.NumberFormat("de-AT", { style: "c
 function hours(minutes: number) { const value = minutes / 60; return `${Number.isInteger(value) ? value : value.toFixed(1)} orë`; }
 function date(value: string | null) { if (!value) return "Pa afat"; const [year, month, day] = value.split("-"); return `${day}.${month}.${year}`; }
 function fileSize(value: number | null) { if (!value) return ""; return value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(value / 1024)} KB`; }
+
+// Rrumbullak progresi (donut ring) — përdoret te shënuesit e fazave, mbushet me ngjyrë sipas % së
+// detyrave të përfunduara në atë fazë (p.sh. 5 nga 10 detyra = 50% e rrethit).
+function PhaseRing({ progress, size = 31, strokeWidth = 3, children }: { progress: number; size?: number; strokeWidth?: number; children: ReactNode }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(100, Math.max(0, progress));
+  const offset = circumference - (clamped / 100) * circumference;
+  const color = clamped === 100 ? "#199455" : "#18B8C1";
+  return (
+    <span className="phaseRing" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e7edf3" strokeWidth={strokeWidth} />
+        {clamped > 0 && <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      </svg>
+      <em>{children}</em>
+    </span>
+  );
+}
 
 export function ProjectDetail({ projectId }: { projectId: number }) {
   const [project, setProject] = useState<Project | null>(null);
@@ -387,7 +408,7 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
         </div>
         <article className="projectMockupPhases">
           <header><div><h3>Fazat e projektit</h3><p>Progresi llogaritet nga detyrat e lidhura me secilën fazë.</p></div><strong>{completedMilestones}/{workspace.milestones.length}</strong></header>
-          {workspace.milestones.length ? <div className="projectMockupPhaseTrack">{workspace.milestones.map((milestone, index) => { const stats = milestoneStats.get(milestone.id)!; return <button key={milestone.id} className={milestone.id === visibleMilestoneId ? "active" : stats.progress === 100 ? "complete" : ""} onClick={() => selectMilestone(milestone.id)}><i>{stats.progress === 100 ? "✓" : index + 1}</i><strong>{milestone.name}</strong><span>{stats.progress}%</span></button>; })}</div> : <p className="projectSimpleEmpty">Nuk ka faza. Krijoji më poshtë.</p>}
+          {workspace.milestones.length ? <div className="projectMockupPhaseTrack">{workspace.milestones.map((milestone, index) => { const stats = milestoneStats.get(milestone.id)!; return <button key={milestone.id} className={milestone.id === visibleMilestoneId ? "active" : stats.progress === 100 ? "complete" : ""} onClick={() => selectMilestone(milestone.id)}><PhaseRing progress={stats.progress}>{stats.progress === 100 ? "✓" : index + 1}</PhaseRing><strong>{milestone.name}</strong><span>{stats.progress}%</span></button>; })}</div> : <p className="projectSimpleEmpty">Nuk ka faza. Krijoji më poshtë.</p>}
         </article>
         {visibleMilestone && project.clientId && <section id="phase-kanban" className="projectPhaseKanban"><TaskManager embedded milestoneFilterId={visibleMilestone.id} milestoneFilterName={visibleMilestone.name} projectContext={{ id: project.id, clientId: project.clientId, name: project.name, clientName: project.clientName, milestones: workspace.milestones.map(({ id, name, status }) => ({ id, name, status })) }} onTasksChanged={() => void load()} /></section>}
         <article className="projectMockupActivity"><header><div><h3>Aktiviteti i fundit</h3><p>Ndryshimet më të reja në projekt.</p></div><button onClick={() => setActiveTab("activity")}>Shiko aktivitetin →</button></header>{activityItems.slice(0, 3).map((entry) => <div key={entry.key}><i /><span><strong>{entry.title}</strong><small>{new Date(entry.createdAt).toLocaleString("de-AT")}</small></span></div>)}</article>
@@ -437,7 +458,7 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
             <select value={milestoneForm.status} onChange={(event) => setMilestoneForm({ ...milestoneForm, status: event.target.value as MilestoneStatus })}><option value="PLANNED">Në pritje</option><option value="IN_PROGRESS">Në punë</option><option value="COMPLETED">Përfunduar</option></select>
             <button className="primaryButton" disabled={saving}>+ Shto</button>
           </form>
-          {workspace.milestones.length ? <div className="projectSimplePhaseList">{workspace.milestones.map((milestone, index) => { const stats = milestoneStats.get(milestone.id)!; return <article key={milestone.id}><i className={`phase-${milestone.status.toLowerCase()}`}>{stats.progress === 100 ? "✓" : index + 1}</i><div className="projectPhaseSummary"><strong>{milestone.name}</strong><span>{date(milestone.dueDate)} · {stats.completed}/{stats.total} detyra · {stats.progress}%</span><div className="projectPhaseProgress"><i style={{ width: `${stats.progress}%` }} /></div></div><select value={milestone.status} disabled={saving} onChange={(event) => void updateMilestone(milestone.id, { status: event.target.value as MilestoneStatus })}><option value="PLANNED">Në pritje</option><option value="IN_PROGRESS">Në punë</option><option value="BLOCKED">E bllokuar</option><option value="COMPLETED">Përfunduar</option></select><button className="cleanDeleteButton" disabled={saving} onClick={() => void deleteMilestone(milestone.id)} aria-label={`Largo ${milestone.name}`}>×</button></article>; })}</div> : <p className="projectSimpleEmpty">Nuk ka faza. Shto fazën e parë më sipër.</p>}
+          {workspace.milestones.length ? <div className="projectSimplePhaseList">{workspace.milestones.map((milestone, index) => { const stats = milestoneStats.get(milestone.id)!; return <article key={milestone.id}><PhaseRing progress={stats.progress} size={28} strokeWidth={3}>{stats.progress === 100 ? "✓" : index + 1}</PhaseRing><div className="projectPhaseSummary"><strong>{milestone.name}</strong><span>{date(milestone.dueDate)} · {stats.completed}/{stats.total} detyra · {stats.progress}%</span><div className="projectPhaseProgress"><i style={{ width: `${stats.progress}%` }} /></div></div><select value={milestone.status} disabled={saving} onChange={(event) => void updateMilestone(milestone.id, { status: event.target.value as MilestoneStatus })}><option value="PLANNED">Në pritje</option><option value="IN_PROGRESS">Në punë</option><option value="BLOCKED">E bllokuar</option><option value="COMPLETED">Përfunduar</option></select><button className="cleanDeleteButton" disabled={saving} onClick={() => void deleteMilestone(milestone.id)} aria-label={`Largo ${milestone.name}`}>×</button></article>; })}</div> : <p className="projectSimpleEmpty">Nuk ka faza. Shto fazën e parë më sipër.</p>}
           <div className="projectWaitingReason">
             <form onSubmit={addBlocker}><input required minLength={2} value={blockerForm.title} onChange={(event) => setBlockerForm({ ...blockerForm, title: event.target.value })} placeholder="Projekti është në pritje sepse…" /><button className="secondaryButton" disabled={saving}>Shëno</button></form>
             {openBlockers.map((blocker) => <div key={blocker.id}><span>⚠ {blocker.title}</span><button onClick={() => void updateBlocker(blocker.id, "RESOLVED")}>✓ Zgjidhur</button><button className="cleanDeleteButton" onClick={() => void deleteBlocker(blocker.id)} aria-label={`Largo ${blocker.title}`}>×</button></div>)}
