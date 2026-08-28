@@ -8,3 +8,6 @@ coverage/
 PUSH_USB_ON_LAPTOP.bat
 push.bat
 COMMIT_MESSAGE.txt
+START.bat
+END.bat
+push.ps1
