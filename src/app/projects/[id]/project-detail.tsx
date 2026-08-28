@@ -364,12 +364,17 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
   }
 
   const openTasks = tasks.filter((task) => task.status !== "COMPLETED").length;
-  const progress = tasks.length ? Math.round(tasks.filter((task) => task.status === "COMPLETED").length / tasks.length * 100) : 0;
   const milestoneStats = new Map(workspace.milestones.map((milestone) => {
     const phaseTasks = tasks.filter((task) => task.projectMilestoneId === milestone.id);
     const completed = phaseTasks.filter((task) => task.status === "COMPLETED").length;
     return [milestone.id, { total: phaseTasks.length, completed, progress: phaseTasks.length ? Math.round(completed / phaseTasks.length * 100) : (milestone.status === "COMPLETED" ? 100 : 0) }];
   }));
+  // Progresi total i projektit: çdo fazë vlen njësoj (100/numri i fazave — 25% secila me 4 fazat
+  // fikse), jo i peshuar sipas numrit të detyrave brenda saj. Kështu një fazë me 2 detyra ndikon
+  // njësoj sa një fazë me 20 detyra.
+  const progress = workspace.milestones.length
+    ? Math.round(workspace.milestones.reduce((sum, milestone) => sum + (milestoneStats.get(milestone.id)?.progress ?? 0), 0) / workspace.milestones.length)
+    : (tasks.length ? Math.round(tasks.filter((task) => task.status === "COMPLETED").length / tasks.length * 100) : 0);
   const phasedTasks = tasks.filter((task) => task.projectMilestoneId !== null);
   const milestoneProgress = phasedTasks.length
     ? Math.round(phasedTasks.filter((task) => task.status === "COMPLETED").length / phasedTasks.length * 100)
