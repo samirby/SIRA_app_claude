@@ -1,6 +1,6 @@
 import { ApiError } from "@/core/http/api-error";
 import { getOrganizationContext } from "@/core/tenancy/context";
-import { findProjectMilestoneRecord } from "@/modules/projects/project-workspace.repository";
+import { findProjectMilestoneBySortOrder, findProjectMilestoneRecord } from "@/modules/projects/project-workspace.repository";
 import { updateProjectMilestone } from "@/modules/projects/project.service";
 import { createTaskSchema, labelSchema, taskExtraCostSchema, taskNoteSchema, taskTimeSchema, updateTaskSchema } from "./task.schema";
 import {
@@ -21,10 +21,26 @@ import {
   updateLabelDefinition,
   updateTaskRecord,
 } from "./task.repository";
-import type { TaskFilters, TaskStatus } from "./task.types";
+import type { TaskFilters, TaskInput, TaskStatus } from "./task.types";
 
 export async function getTasks(filters: TaskFilters = {}) {
   return listTasks(getOrganizationContext().organizationId, filters);
+}
+
+// Faza e projektit (Milestone) lidhet automatikisht me statusin e Kanban-it të detyrës: çdo projekt i ri
+// ka saktësisht 4 faza (shih FIXED_PROJECT_PHASES te project.service.ts), me sortOrder 0-3, që
+// korrespondojnë 1-për-1 me këto 4 statuse. Kur statusi i detyrës ndryshon, detyra kalon vetë te faza
+// me sortOrder-in përkatës; kur faza e detyrës ndryshohet manualisht, statusi përditësohet anasjelltas.
+const TASK_STATUS_PHASE_ORDER: Record<TaskStatus, number> = { NEW: 0, IN_PROGRESS: 1, WAITING: 2, COMPLETED: 3 };
+const PHASE_ORDER_TASK_STATUS: TaskStatus[] = ["NEW", "IN_PROGRESS", "WAITING", "COMPLETED"];
+
+async function resolveMilestoneIdForStatus(organizationId: number, projectId: number, status: TaskStatus): Promise<number | null> {
+  const milestone = await findProjectMilestoneBySortOrder(organizationId, projectId, TASK_STATUS_PHASE_ORDER[status]);
+  return milestone?.id ?? null;
+}
+
+function resolveStatusForSortOrder(sortOrder: number): TaskStatus | null {
+  return PHASE_ORDER_TASK_STATUS[sortOrder] ?? null;
 }
 
 async function syncMilestoneStatusFromTaskStatus(organizationId: number, projectMilestoneId: number, taskStatus: TaskStatus) {
@@ -61,16 +77,23 @@ export async function createTask(payload: unknown) {
     throw new ApiError(400, "Lloji i faturimit të detyrës nuk përputhet me projektin.", "PROJECT_TASK_BILLING_MISMATCH");
   }
   const organizationId = getOrganizationContext().organizationId;
+  const taskInput: TaskInput = { ...parsed.data };
   if (parsed.data.projectMilestoneId) {
     if (!parsed.data.projectId) throw new ApiError(400, "Faza kërkon një projekt.", "TASK_PHASE_REQUIRES_PROJECT");
     const milestone = await findProjectMilestoneRecord(organizationId, parsed.data.projectMilestoneId);
     if (!milestone || milestone.projectId !== parsed.data.projectId) {
       throw new ApiError(400, "Faza e zgjedhur nuk i përket këtij projekti.", "TASK_PHASE_PROJECT_MISMATCH");
     }
+    // Faza u zgjodh eksplicitisht (p.sh. nga "Fazat") — statusi i detyrës përshtatet me atë fazë.
+    const derivedStatus = resolveStatusForSortOrder(milestone.sortOrder);
+    if (derivedStatus) taskInput.status = derivedStatus;
+  } else if (parsed.data.projectId) {
+    // S'u zgjodh fazë — vendose vetë sipas statusit fillestar të detyrës (zakonisht "E re").
+    taskInput.projectMilestoneId = await resolveMilestoneIdForStatus(organizationId, parsed.data.projectId, parsed.data.status);
   }
-  const task = await insertTask(organizationId, parsed.data);
-  if (parsed.data.projectMilestoneId) {
-    await syncMilestoneStatusFromTaskStatus(organizationId, parsed.data.projectMilestoneId, parsed.data.status);
+  const task = await insertTask(organizationId, taskInput);
+  if (taskInput.projectMilestoneId) {
+    await syncMilestoneStatusFromTaskStatus(organizationId, taskInput.projectMilestoneId, taskInput.status);
   }
   return task;
 }
@@ -84,7 +107,8 @@ export async function updateTask(taskId: number, payload: unknown) {
   const subjectType = parsed.data.subjectType ?? current.subjectType;
   const clientId = Object.prototype.hasOwnProperty.call(parsed.data, "clientId") ? parsed.data.clientId : current.clientId;
   const personName = Object.prototype.hasOwnProperty.call(parsed.data, "personName") ? parsed.data.personName : current.personName;
-  const projectId = Object.prototype.hasOwnProperty.call(parsed.data, "projectId") ? parsed.data.projectId : current.projectId;
+  const projectId = (Object.prototype.hasOwnProperty.call(parsed.data, "projectId")
+    ? parsed.data.projectId : current.projectId) as number | null | undefined;
   const projectMilestoneId = (Object.prototype.hasOwnProperty.call(parsed.data, "projectMilestoneId")
     ? parsed.data.projectMilestoneId : current.projectMilestoneId) as number | null | undefined;
   const projectBillingType = parsed.data.projectBillingType ?? current.projectBillingType;
@@ -98,27 +122,47 @@ export async function updateTask(taskId: number, payload: unknown) {
   if (projectId && (projectBillingType === "EXTRA_BILLABLE") !== billable) {
     throw new ApiError(400, "Lloji i faturimit të detyrës nuk përputhet me projektin.", "PROJECT_TASK_BILLING_MISMATCH");
   }
+  let milestoneRecord: Awaited<ReturnType<typeof findProjectMilestoneRecord>> = null;
   if (projectMilestoneId) {
     if (!projectId) throw new ApiError(400, "Faza kërkon një projekt.", "TASK_PHASE_REQUIRES_PROJECT");
-    const milestone = await findProjectMilestoneRecord(getOrganizationContext().organizationId, projectMilestoneId);
-    if (!milestone || milestone.projectId !== projectId) {
+    milestoneRecord = await findProjectMilestoneRecord(getOrganizationContext().organizationId, projectMilestoneId);
+    if (!milestoneRecord || milestoneRecord.projectId !== projectId) {
       throw new ApiError(400, "Faza e zgjedhur nuk i përket këtij projekti.", "TASK_PHASE_PROJECT_MISMATCH");
     }
   }
+
+  // Lidhja dyanëshe status ↔ fazë: nëse ndryshon statusi (Kanban), detyra kalon vetë te faza
+  // përkatëse; nëse ndryshon vetëm faza (manualisht), statusi përshtatet automatikisht me atë fazë.
+  const statusExplicit = Object.prototype.hasOwnProperty.call(parsed.data, "status");
+  const milestoneExplicit = Object.prototype.hasOwnProperty.call(parsed.data, "projectMilestoneId");
+  const updateInput: Partial<TaskInput> = { ...parsed.data };
+  let effectiveProjectMilestoneId = projectMilestoneId;
+  if (projectId && statusExplicit) {
+    const targetMilestoneId = await resolveMilestoneIdForStatus(getOrganizationContext().organizationId, projectId, parsed.data.status as TaskStatus);
+    if (targetMilestoneId && targetMilestoneId !== effectiveProjectMilestoneId) {
+      effectiveProjectMilestoneId = targetMilestoneId;
+      updateInput.projectMilestoneId = targetMilestoneId;
+    }
+  } else if (milestoneExplicit && milestoneRecord) {
+    const derivedStatus = resolveStatusForSortOrder(milestoneRecord.sortOrder);
+    if (derivedStatus) updateInput.status = derivedStatus;
+  }
+  const statusChanging = Object.prototype.hasOwnProperty.call(updateInput, "status");
+
   if (["DRAFTED", "INVOICED"].includes(current.billingStatus)) {
     const changesBilling = ["billable", "projectBillingType", "billingType", "invoiceDescription", "quantity", "unitPrice", "vatRate", "discountPercent"]
       .some((key) => Object.prototype.hasOwnProperty.call(parsed.data, key));
-    if (changesBilling || (parsed.data.status && parsed.data.status !== "COMPLETED")) {
+    if (changesBilling || (statusChanging && updateInput.status !== "COMPLETED")) {
       throw new ApiError(409, "Detyra është e lidhur me një faturë dhe nuk mund të ndryshohet në këtë mënyrë.", "TASK_IN_INVOICE");
     }
   }
-  if (current.billingStatus === "PENDING" && parsed.data.status && parsed.data.status !== "COMPLETED") {
+  if (current.billingStatus === "PENDING" && statusChanging && updateInput.status !== "COMPLETED") {
     await setTaskBillingQueue(getOrganizationContext().organizationId, taskId, false);
   }
-  const updated = await updateTaskRecord(getOrganizationContext().organizationId, taskId, parsed.data);
+  const updated = await updateTaskRecord(getOrganizationContext().organizationId, taskId, updateInput);
   if (!updated) throw new ApiError(404, "Detyra nuk u gjet.", "TASK_NOT_FOUND");
-  if (projectMilestoneId && parsed.data.status) {
-    await syncMilestoneStatusFromTaskStatus(getOrganizationContext().organizationId, projectMilestoneId, parsed.data.status as TaskStatus);
+  if (effectiveProjectMilestoneId && statusChanging) {
+    await syncMilestoneStatusFromTaskStatus(getOrganizationContext().organizationId, effectiveProjectMilestoneId, updateInput.status as TaskStatus);
   }
   return updated;
 }

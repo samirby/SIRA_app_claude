@@ -42,24 +42,15 @@ import {
   updateProjectRecord,
 } from "./project.repository";
 
-const projectTemplates = {
-  WEBSITE: [
-    { name: "Planifikimi dhe materialet", tasks: ["Përcakto kërkesat dhe faqet", "Kontrollo domainin dhe hostimin", "Kërko logon, tekstet dhe fotografitë", "Merr të dhënat e kontaktit dhe dokumentet ligjore"] },
-    { name: "Dizajni", tasks: ["Krijo strukturën e navigimit", "Krijo dizajnin e Homepage", "Përshtat dizajnin për Mobile", "Merr aprovimin e dizajnit"] },
-    { name: "Zhvillimi", tasks: ["Konfiguro projektin", "Ndërto Header dhe Footer", "Ndërto Homepage dhe faqet e brendshme", "Krijo formularin e kontaktit", "Implemento responsive design", "Implemento SEO bazik dhe Cookie Consent"] },
-    { name: "Testimi dhe dorëzimi", tasks: ["Testo Desktop dhe Mobile", "Testo linkët dhe formularët", "Kontrollo shpejtësinë, SSL dhe backup-in", "Publiko website-in", "Dorëzo qasjet dhe merr konfirmimin e klientit"] },
-  ],
-  IT: [
-    { name: "Analiza", tasks: ["Analizo kërkesën", "Dokumento gjendjen aktuale", "Përcakto zgjidhjen"] },
-    { name: "Përgatitja", tasks: ["Përgatit pajisjet dhe qasjet", "Krijo planin e implementimit"] },
-    { name: "Implementimi", tasks: ["Implemento zgjidhjen", "Dokumento ndryshimet"] },
-    { name: "Testimi dhe dorëzimi", tasks: ["Testo funksionimin", "Merr konfirmimin e klientit", "Dorëzo dokumentacionin"] },
-  ],
-  GRAPHIC: [{ name: "Briefing", tasks: ["Mblidh kërkesat dhe materialet"] }, { name: "Koncepti", tasks: ["Krijo konceptet fillestare"] }, { name: "Përpunimi", tasks: ["Realizo dizajnin", "Apliko korrigjimet"] }, { name: "Aprovimi dhe dorëzimi", tasks: ["Merr aprovimin", "Eksporto dhe dorëzo skedarët"] }],
-  VIDEO: [{ name: "Planifikimi", tasks: ["Përcakto skenarin dhe materialet"] }, { name: "Xhirimi", tasks: ["Realizo xhirimet"] }, { name: "Montazhi", tasks: ["Monto videon", "Shto audio dhe grafikë"] }, { name: "Aprovimi dhe dorëzimi", tasks: ["Apliko korrigjimet", "Eksporto dhe dorëzo videon"] }],
-  MARKETING: [{ name: "Strategjia", tasks: ["Përcakto objektivat dhe audiencën"] }, { name: "Përgatitja", tasks: ["Përgatit përmbajtjen dhe materialet"] }, { name: "Publikimi", tasks: ["Planifiko dhe publiko fushatën"] }, { name: "Analiza", tasks: ["Analizo rezultatet", "Përgatit raportin"] }],
-  OTHER: [{ name: "Planifikimi", tasks: ["Përcakto kërkesat"] }, { name: "Përgatitja", tasks: ["Përgatit materialet"] }, { name: "Realizimi", tasks: ["Realizo punën"] }, { name: "Kontrolli dhe dorëzimi", tasks: ["Kontrollo dhe dorëzo rezultatin"] }],
-} as const;
+// Çdo projekt i ri (pavarësisht llojit) merr saktësisht këto 4 faza fikse, të lidhura automatikisht
+// me statuset e Kanban-it të detyrave (shih TASK_STATUS_PHASE_ORDER te task.service.ts): kur statusi
+// i një detyre ndryshon, detyra kalon vetë te faza me të njëjtin sortOrder, dhe anasjelltas.
+const FIXED_PROJECT_PHASES = [
+  { name: "E re", description: "Planifikimi dhe materialet" },
+  { name: "Në punë", description: "Dizajni dhe zhvillimi" },
+  { name: "Në pritje", description: "Aprovimi nga klienti" },
+  { name: "Përfunduar", description: "Testimi dhe dorëzimi" },
+] as const;
 
 export function getProjects(activeOnly = false) {
   return listProjects(getOrganizationContext().organizationId, activeOnly);
@@ -83,10 +74,9 @@ export async function createProject(payload: unknown) {
     productDescription: product?.description ?? null,
   });
   if (parsed.data.createTemplateTasks) {
-    const template = projectTemplates[parsed.data.projectType];
-    for (const [phaseIndex, phase] of template.entries()) {
+    for (const [phaseIndex, phase] of FIXED_PROJECT_PHASES.entries()) {
       await insertProjectTemplateMilestoneRecord(organizationId, project.id, {
-        name: phase.name, status: phaseIndex === 0 ? "IN_PROGRESS" : "PLANNED",
+        name: phase.name, description: phase.description, status: phaseIndex === 0 ? "IN_PROGRESS" : "PLANNED",
         startDate: phaseIndex === 0 ? project.startDate : null, dueDate: project.dueDate, sortOrder: phaseIndex,
       });
     }
