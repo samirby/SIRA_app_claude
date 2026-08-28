@@ -379,7 +379,6 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
     ?? workspace.milestones.find((milestone) => milestone.status !== "COMPLETED")
     ?? workspace.milestones.at(-1);
   const visibleMilestoneId = selectedMilestoneId ?? activeMilestone?.id ?? null;
-  const visibleMilestone = workspace.milestones.find((milestone) => milestone.id === visibleMilestoneId);
   const timeProgress = project?.estimatedMinutes ? Math.round((project.spentMinutes / project.estimatedMinutes) * 100) : 0;
   const openBlockers = workspace.blockers.filter((item) => item.status === "OPEN");
   const hasBilling = Boolean(project && project.billingNet > 0);
@@ -410,7 +409,10 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
           <header><div><h3>Fazat e projektit</h3><p>Progresi llogaritet nga detyrat e lidhura me secilën fazë.</p></div><strong>{completedMilestones}/{workspace.milestones.length}</strong></header>
           {workspace.milestones.length ? <div className="projectMockupPhaseTrack">{workspace.milestones.map((milestone, index) => { const stats = milestoneStats.get(milestone.id)!; return <button key={milestone.id} className={milestone.id === visibleMilestoneId ? "active" : stats.progress === 100 ? "complete" : ""} onClick={() => selectMilestone(milestone.id)}><PhaseRing progress={stats.progress}>{stats.progress === 100 ? "✓" : index + 1}</PhaseRing><strong>{milestone.name}</strong><span>{stats.progress}%</span></button>; })}</div> : <p className="projectSimpleEmpty">Nuk ka faza. Krijoji më poshtë.</p>}
         </article>
-        {visibleMilestone && project.clientId && <section id="phase-kanban" className="projectPhaseKanban"><TaskManager embedded milestoneFilterId={visibleMilestone.id} milestoneFilterName={visibleMilestone.name} projectContext={{ id: project.id, clientId: project.clientId, name: project.name, clientName: project.clientName, milestones: workspace.milestones.map(({ id, name, status }) => ({ id, name, status })) }} onTasksChanged={() => void load()} /></section>}
+        {/* Kanban-i i plotë i projektit (jo i filtruar sipas fazës) — meqë çdo status Kanban ËSHTË
+            vetë faza (shih v0.14.7), filtrimi te një fazë e vetme e fshihte detyrën sapo ndryshonte
+            statusi (dilte nga faza e filtruar). Klikimi i një faze më sipër vetëm zbret te ky Kanban. */}
+        {project.clientId && <section id="phase-kanban" className="projectPhaseKanban"><TaskManager embedded projectContext={{ id: project.id, clientId: project.clientId, name: project.name, clientName: project.clientName, milestones: workspace.milestones.map(({ id, name, status }) => ({ id, name, status })) }} onTasksChanged={() => void load()} /></section>}
         <article className="projectMockupActivity"><header><div><h3>Aktiviteti i fundit</h3><p>Ndryshimet më të reja në projekt.</p></div><button onClick={() => setActiveTab("activity")}>Shiko aktivitetin →</button></header>{activityItems.slice(0, 3).map((entry) => <div key={entry.key}><i /><span><strong>{entry.title}</strong><small>{new Date(entry.createdAt).toLocaleString("de-AT")}</small></span></div>)}</article>
       </section>
 
